@@ -5,3 +5,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE ddram.sv
 set_global_assignment -name VHDL_FILE bram.vhd
 set_global_assignment -name SDC_FILE GBA.sdc
 set_global_assignment -name SYSTEMVERILOG_FILE GBA.sv
+set_global_assignment -name VERILOG_FILE joydb15.v

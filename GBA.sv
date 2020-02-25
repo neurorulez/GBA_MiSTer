@@ -118,6 +118,8 @@ module emu
 	// 1 - D-/TX
 	// 2..6 - USR2..USR6
 	// Set USER_OUT to 1 to read from USER_IN.
+    output  	  USER_OSD,	
+    output	      USER_MODE,
 	input   [6:0] USER_IN,
 	output  [6:0] USER_OUT,
 
@@ -126,7 +128,12 @@ module emu
 
 assign ADC_BUS  = 'Z;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
-assign USER_OUT = '1;
+
+wire   JOY_CLK, JOY_LOAD;
+wire   JOY_DATA  = USER_IN[5];
+assign USER_OUT  = status[31] ? {5'b11111,JOY_CLK,JOY_LOAD} : '1;
+assign USER_MODE = status[31] ;
+assign USER_OSD  = joydb15_1[8] & joydb15_1[6];
 
 assign AUDIO_S   = 1;
 assign AUDIO_MIX = status[8:7];
@@ -182,6 +189,7 @@ parameter CONF_STR = {
 	"h4H3-;",
 	"O1,Aspect Ratio,3:2,16:9;",
 	"O24,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
+	"OV,Serial SNAC DB15,Off,1 Player;",
    "OOQ,Modify Colors,Off,GBA 2.2,GBA 1.6,NDS 1.6,VBA 1.4,75%,50%,25%;",
    "OJ,Flickerblend,Off,On;",
    "OK,Spritelimit,Off,On;",
@@ -230,11 +238,25 @@ wire        ioctl_wr;
 wire  [7:0] ioctl_index;
 reg         ioctl_wait = 0;
 
-wire [12:0] joy;
+wire [12:0] joy_USB;
 wire [10:0] ps2_key;
 
 wire [21:0] gamma_bus;
 wire [15:0] sdram_sz;
+
+wire [12:0] joy = status[31] ? {joydb15_1[8],joydb15_1[9],joydb15_1[7:0]} : joy_USB;
+
+reg [15:0] joydb15_1,joydb15_2;
+joy_db15 joy_db15
+(
+  .clk       ( CLK_VIDEO   ), //48MHz
+  .JOY_CLK   ( JOY_CLK   ),
+  .JOY_DATA  ( JOY_DATA  ),
+  .JOY_LOAD  ( JOY_LOAD  ),
+  .joystick1 ( joydb15_1 ),
+  .joystick2 ( joydb15_2 )	  
+);
+
 
 hps_io #(.STRLEN($size(CONF_STR)>>3), .WIDE(1)) hps_io
 (
@@ -245,7 +267,8 @@ hps_io #(.STRLEN($size(CONF_STR)>>3), .WIDE(1)) hps_io
 	.buttons(buttons),
 	.forced_scandoubler(forced_scandoubler),
 
-	.joystick_0(joy),
+	.joy_raw(joydb15_1[5:0]),
+	.joystick_0(joy_USB),
 	.ps2_key(ps2_key),
 
 	.status(status),
